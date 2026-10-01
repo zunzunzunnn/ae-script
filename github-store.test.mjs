@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createStore,encode,decode} from './github-store.mjs';
+import {createStore,encode,decode,githubError} from './github-store.mjs';
 const a={id:'a',title:'Rotasi ✨',code:'// 日本語\nvalue + time * 90;\n'},b={id:'b',title:'Wiggle',code:'wiggle(2,30);'};
 const res=(data,status=200)=>({ok:status>=200&&status<300,status,json:async()=>data});
 const file=(items,sha='old')=>res({content:encode(items),encoding:'base64',sha});
@@ -12,4 +12,8 @@ test('Delete preserves unrelated remote additions',async()=>{const s=createStore
 test('Rejected save reports error without success',async()=>{const s=createStore(async(u,o)=>!u.includes('/contents/')?res({permissions:{push:true}}):o.method?res({},403):file([a]));await s.connect('test-token');await assert.rejects(s.change({type:'delete',id:'a'}),/Akses ditolak/);assert.deepEqual((await s.read()).items,[a])});
 test('Invalid remote data blocks writes',async()=>{const s=createStore(async(u,o)=>{if(!u.includes('/contents/'))return res({permissions:{push:true}});assert.equal(o.method,undefined);return res({content:btoa('{}'),encoding:'base64',sha:'x'})});await s.connect('test-token');await assert.rejects(s.change({type:'add',items:[a]}),/Format koleksi/)});
 test('Disconnect clears credentials',async()=>{let auth;const s=createStore(async(u,o)=>{auth=o.headers.Authorization;return u.includes('/contents/')?file([]):res({permissions:{push:true}})});await s.connect('test-token');s.disconnect();await s.read();assert.equal(auth,undefined);assert.equal(s.connected(),false)});
+test('403 permissions gives exact repository configuration',async()=>{const e=await githubError(res({message:'Resource not accessible by personal access token'},403));assert.match(e.message,/Only select repositories/);assert.doesNotMatch(e.message,/Batas permintaan/)});
+test('403 primary rate limit gives waiting advice rather than token changes',async()=>{const r=res({},403);r.headers=new Headers({'x-ratelimit-remaining':'0','retry-after':'120'});const e=await githubError(r);assert.match(e.message,/2 menit/);assert.match(e.message,/tidak perlu diubah/)});
+test('403 secondary rate limit is separate from permissions',async()=>{const e=await githubError(res({message:'You have exceeded a secondary rate limit'},403));assert.match(e.message,/Batas permintaan/)});
+test('Branch restrictions are not mistaken for token permissions',async()=>{const e=await githubError(res({message:'Protected branch update failed. Changes must be made through a pull request.'},403));assert.match(e.message,/pull request/)});
 
