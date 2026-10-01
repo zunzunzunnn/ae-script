@@ -1,27 +1,30 @@
 # Expression Shelf
 
-A minimal glassmorphism library for Adobe After Effects expressions, in an After Effects inspired purple palette.
+A minimal After Effects expression library with glass cards, Add, Copy, read-only Code, and confirmed Delete.
 
-## Features
+## GitHub storage
 
-- Cards with a fixed decorative code thumbnail, title, Copy, Code, and Delete actions.
-- Add dialog with title and expression fields, Save and Cancel.
-- Read-only code dialog; existing scripts cannot be edited.
-- Delete confirmation with cancellation focused by default.
-- Exact clipboard copying, responsive layout, keyboard-accessible dialogs, reduced-motion support.
-- Three starter expressions: wiggle position, loop, and rotation.
+The source of truth is scripts.json in zunzunzunnn/ae-script on main. The page reads it directly from the GitHub API on every load, so saved scripts are available across devices. Scripts are public because this repository is public.
 
-## Storage
+Reading and copying require no login. To add or delete:
 
-The current implementation uses browser-local storage under `expression-shelf.v1`. Collections are specific to the browser and website origin; they are not synchronized between devices or committed to GitHub. Clearing browser data removes saved scripts. Storage failures keep form contents intact and show an error.
+1. Create a fine-grained token at https://github.com/settings/personal-access-tokens/new.
+2. Select only ae-script, set an expiry, and grant Contents: Read and write.
+3. Click Hubungkan GitHub on the website and enter the token there. Never commit it or send it in chat.
+
+The token exists only in page memory and is sent only to api.github.com. Reloading or disconnecting clears it. Tokens are never saved in browser storage, URLs, or repository files. Codex's GitHub connection is separate from the website connection.
+
+Save and Delete create commits using the latest file SHA. Conflicts reload and merge fresh data; scripts added on other devices are preserved. Repeating a save does not duplicate an already saved expression. Failed saves keep the form intact. The collection limit is 950 KB.
+
+Old browser-only collections can be published with Salin koleksi browser ke GitHub after confirmation. Their local originals remain untouched.
 
 ## Hosting
 
-No build step or dependencies are required. Publish this directory as the root of a GitHub Pages repository. In Settings > Pages, choose Deploy from a branch, main, and / (root).
+No build step. GitHub Pages: Deploy from a branch > main > / (root).
 
-For local preview, run a static HTTP server in this directory. HTTPS or localhost is needed for Clipboard API access.
+## Tests
 
-## Checks performed
+Run node --test --test-isolation=none github-store.test.mjs for Unicode, anonymous access, concurrent saves, idempotency, deletion, permission failures, invalid data, and disconnect tests.
 
-Verified add, reload persistence, exact clipboard content, read-only code view, cancel deletion, confirm deletion, and responsive layout at 390px in a browser.
+Reference: https://docs.github.com/en/rest/repos/contents#create-or-update-file-contents
 
