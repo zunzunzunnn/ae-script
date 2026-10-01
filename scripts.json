@@ -1,0 +1,18 @@
+[
+  {
+    "id": "wiggle",
+    "title": "Wiggle position",
+    "code": "// Apply to Position\n// Frequency (per second), amplitude (pixels)\nwiggle(2, 30);"
+  },
+  {
+    "id": "loop",
+    "title": "Loop forever",
+    "code": "// Apply to an animated property\n// Repeat the animation between keyframes\nloopOut(\"cycle\");"
+  },
+  {
+    "id": "rotation",
+    "title": "Infinite rotation",
+    "code": "// Apply to Rotation\n// Degrees per second\nvalue + time * 90;"
+  }
+]
+
