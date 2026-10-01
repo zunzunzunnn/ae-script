@@ -1,0 +1,15 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {createStore,encode,decode} from './github-store.mjs';
+const a={id:'a',title:'Rotasi ✨',code:'// 日本語\nvalue + time * 90;\n'},b={id:'b',title:'Wiggle',code:'wiggle(2,30);'};
+const res=(data,status=200)=>({ok:status>=200&&status<300,status,json:async()=>data});
+const file=(items,sha='old')=>res({content:encode(items),encoding:'base64',sha});
+test('Unicode and whitespace roundtrip',()=>assert.deepEqual(decode(encode([a])),[a]));
+test('Anonymous reads and unauthenticated writes',async()=>{const s=createStore(async(u,o)=>{assert.equal(o.headers.Authorization,undefined);return file([a])});assert.deepEqual((await s.read()).items,[a]);await assert.rejects(s.change({type:'delete',id:'a'}),/Hubungkan/)});
+test('Conflicting saves merge fresh data',async()=>{let reads=0,writes=0;const s=createStore(async(u,o)=>{assert.equal(o.headers.Authorization,'Bearer test-token');if(!u.includes('/contents/'))return res({permissions:{push:true}});if(!o.method)return ++reads===1?file([]):file([b],'new');if(++writes===1)return res({},409);const body=JSON.parse(o.body);assert.equal(body.sha,'new');assert.deepEqual(decode(body.content),[a,b]);return res({})});await s.connect('test-token');assert.deepEqual(await s.change({type:'add',items:[a]}),[a,b]);assert.equal(writes,2)});
+test('Retry does not duplicate already saved script',async()=>{const s=createStore(async(u,o)=>{if(!u.includes('/contents/'))return res({permissions:{push:true}});assert.equal(o.method,undefined);return file([a])});await s.connect('test-token');assert.deepEqual(await s.change({type:'add',items:[a]}),[a])});
+test('Delete preserves unrelated remote additions',async()=>{const s=createStore(async(u,o)=>{if(!u.includes('/contents/'))return res({permissions:{push:true}});if(!o.method)return file([a,b]);assert.deepEqual(decode(JSON.parse(o.body).content),[b]);return res({})});await s.connect('test-token');assert.deepEqual(await s.change({type:'delete',id:'a'}),[b])});
+test('Rejected save reports error without success',async()=>{const s=createStore(async(u,o)=>!u.includes('/contents/')?res({permissions:{push:true}}):o.method?res({},403):file([a]));await s.connect('test-token');await assert.rejects(s.change({type:'delete',id:'a'}),/Akses ditolak/);assert.deepEqual((await s.read()).items,[a])});
+test('Invalid remote data blocks writes',async()=>{const s=createStore(async(u,o)=>{if(!u.includes('/contents/'))return res({permissions:{push:true}});assert.equal(o.method,undefined);return res({content:btoa('{}'),encoding:'base64',sha:'x'})});await s.connect('test-token');await assert.rejects(s.change({type:'add',items:[a]}),/Format koleksi/)});
+test('Disconnect clears credentials',async()=>{let auth;const s=createStore(async(u,o)=>{auth=o.headers.Authorization;return u.includes('/contents/')?file([]):res({permissions:{push:true}})});await s.connect('test-token');s.disconnect();await s.read();assert.equal(auth,undefined);assert.equal(s.connected(),false)});
+
