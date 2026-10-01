@@ -1,0 +1,12 @@
+{
+  "firebase": {
+    "apiKey": "AIzaSyBYiAEtks-NSESRW6btmG6k-SJOj9_rAzQ",
+    "authDomain": "ae-script-library-2026.firebaseapp.com",
+    "projectId": "ae-script-library-2026",
+    "storageBucket": "ae-script-library-2026.firebasestorage.app",
+    "messagingSenderId": "522509919110",
+    "appId": "1:522509919110:web:2b0cfe5dc6f130f4f50207"
+  },
+  "adminEmail": "admin@ae-script.app"
+}
+
